@@ -6,7 +6,7 @@ namespace FluVirus.AntiBruteForce.Mock.Client.Cli;
 
 internal class Program
 {
-    static async Task Main(string[] args)
+    static async Task Main(string[] _)
     {
         IConfiguration c = new ConfigurationBuilder()
             .AddEnvironmentVariables(prefix: "DOTNET_")
@@ -20,7 +20,7 @@ internal class Program
         };
 
         CancellationTokenSource cts = new();
-        Console.CancelKeyPress += (object? sender, ConsoleCancelEventArgs e) => cts.Cancel();
+        Console.CancelKeyPress += (_, _) => cts.Cancel();
 
         CancellationToken token = cts.Token;
         while (!token.IsCancellationRequested)

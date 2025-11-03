@@ -17,12 +17,12 @@ public class Program
         app.UseMiddleware<ExceptionHandlerMiddleware>();
         app.UseMiddleware<AntiBruteForceMiddleware>();
 
-        app.MapGet("/resource", async (HttpContext context) =>
-            await context.Response.WriteAsJsonAsync(InMemoryResourceStorage.Default, context.RequestAborted)
+        app.MapGet("/resource", context =>
+            context.Response.WriteAsJsonAsync(InMemoryResourceStorage.Default, context.RequestAborted)
         );
 
-        app.MapGet("/echo/{value:int}", async (HttpContext context, int value) =>
-            await context.Response.WriteAsJsonAsync(new Resource { Value = value }, context.RequestAborted)
+        app.MapGet("/echo/{value:int}", (HttpContext context, int value) =>
+            context.Response.WriteAsJsonAsync(new Resource { Value = value }, context.RequestAborted)
         );
 
         app.Run();
