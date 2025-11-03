@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+
+permissions:
+  contents: read
+
+jobs:
+  dotnet-authserver:
+    name: ".NET Lint & Test - Mock AuthServer"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mock/FluVirus.AntiBruteForce.Mock.AuthServer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            9.0.x
+            8.0.x
+
+      - name: Restore
+        run: dotnet restore FluVirus.AntiBruteForce.Mock.AuthServer.sln
+
+      - name: Build (Release)
+        run: dotnet build FluVirus.AntiBruteForce.Mock.AuthServer.sln -c Release --no-restore
+
+      - name: Lint (dotnet format)
+        run: dotnet format --verify-no-changes --severity info
+
+      - name: Test
+        run: |
+          if ls -1 **/*.Tests.csproj 2>/dev/null | grep -q .; then \
+            find . -name "*.Tests.csproj" -print0 | xargs -0 -I{} dotnet test {} -c Release --no-build --logger trx; \
+          else \
+            echo "No test projects found. Skipping tests."; \
+          fi
+
+  dotnet-client:
+    name: ".NET Lint & Test - Mock Client CLI"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mock/FluVirus.AntiBruteForce.Mock.Client
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            9.0.x
+            8.0.x
+
+      - name: Restore
+        run: dotnet restore FluVirus.AntiBruteForce.Mock.Client.sln
+
+      - name: Build (Release)
+        run: dotnet build FluVirus.AntiBruteForce.Mock.Client.sln -c Release --no-restore
+
+      - name: Lint (dotnet format)
+        run: dotnet format --verify-no-changes --severity info
+
+      - name: Test
+        run: |
+          if ls -1 **/*.Tests.csproj 2>/dev/null | grep -q .; then \
+            find . -name "*.Tests.csproj" -print0 | xargs -0 -I{} dotnet test {} -c Release --no-build --logger trx; \
+          else \
+            echo "No test projects found. Skipping tests."; \
+          fi
+
+  go-abf:
+    name: "Go Lint & Test - ABF Server"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/abfserver
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          check-latest: true
+
+      - name: Go Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('src/abfserver/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: src/abfserver
+
+      - name: Lint
+        run: golangci-lint run ./...
+
+      - name: Test
+        run: go test ./...
+
+
