@@ -9,8 +9,12 @@ public class Program
     public static void Main(string[] args)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
         builder.Services.AddSingleton<ExceptionHandlerMiddleware>();
         builder.Services.AddSingleton<AntiBruteForceMiddleware>();
+
+        AppConfiguration configuration = builder.Configuration.Get<AppConfiguration>() ?? throw new Exception("Cannot bind configuration");
+        builder.Services.AddSingleton(configuration);
 
         WebApplication app = builder.Build();
 
