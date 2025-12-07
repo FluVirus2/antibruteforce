@@ -10,80 +10,10 @@ permissions:
   contents: read
 
 jobs:
-  dotnet-authserver:
-    name: ".NET Lint & Test - Mock AuthServer"
+  lint:
+    name: "Lint"
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mock/FluVirus.AntiBruteForce.Mock.AuthServer
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            9.0.x
-            8.0.x
-
-      - name: Restore
-        run: dotnet restore FluVirus.AntiBruteForce.Mock.AuthServer.sln
-
-      - name: Build (Release)
-        run: dotnet build FluVirus.AntiBruteForce.Mock.AuthServer.sln -c Release --no-restore
-
-      - name: Lint (dotnet format)
-        run: dotnet format --verify-no-changes --severity info
-
-      - name: Test
-        run: |
-          if ls -1 **/*.Tests.csproj 2>/dev/null | grep -q .; then \
-            find . -name "*.Tests.csproj" -print0 | xargs -0 -I{} dotnet test {} -c Release --no-build --logger trx; \
-          else \
-            echo "No test projects found. Skipping tests."; \
-          fi
-
-  dotnet-client:
-    name: ".NET Lint & Test - Mock Client CLI"
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mock/FluVirus.AntiBruteForce.Mock.Client
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            9.0.x
-            8.0.x
-
-      - name: Restore
-        run: dotnet restore FluVirus.AntiBruteForce.Mock.Client.sln
-
-      - name: Build (Release)
-        run: dotnet build FluVirus.AntiBruteForce.Mock.Client.sln -c Release --no-restore
-
-      - name: Lint (dotnet format)
-        run: dotnet format --verify-no-changes --severity info
-
-      - name: Test
-        run: |
-          if ls -1 **/*.Tests.csproj 2>/dev/null | grep -q .; then \
-            find . -name "*.Tests.csproj" -print0 | xargs -0 -I{} dotnet test {} -c Release --no-build --logger trx; \
-          else \
-            echo "No test projects found. Skipping tests."; \
-          fi
-
-  go-abf:
-    name: "Go Lint & Test - ABF Server"
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: src/abfserver
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -91,8 +21,23 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23.x'
-          check-latest: true
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install Protobuf Compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+          protoc --version
+
+      - name: Generate gRPC code
+        run: |
+          mkdir -p api/gen
+          find api/proto -name "*.proto" -print0 | xargs -0 -I{} \
+            protoc -I api/proto --go_out=api/gen --go-grpc_out=api/gen {}
+
+      - name: Install dependencies
+        run: go mod download -x
 
       - name: Go Cache
         uses: actions/cache@v4
@@ -116,4 +61,5 @@ jobs:
       - name: Test
         run: go test ./...
 
+  unit-test:
 
