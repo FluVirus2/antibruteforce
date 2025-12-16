@@ -10,80 +10,10 @@ permissions:
   contents: read
 
 jobs:
-  dotnet-authserver:
-    name: ".NET Lint & Test - Mock AuthServer"
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mock/FluVirus.AntiBruteForce.Mock.AuthServer
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            9.0.x
-            8.0.x
-
-      - name: Restore
-        run: dotnet restore FluVirus.AntiBruteForce.Mock.AuthServer.sln
-
-      - name: Build (Release)
-        run: dotnet build FluVirus.AntiBruteForce.Mock.AuthServer.sln -c Release --no-restore
-
-      - name: Lint (dotnet format)
-        run: dotnet format --verify-no-changes --severity info
-
-      - name: Test
-        run: |
-          if ls -1 **/*.Tests.csproj 2>/dev/null | grep -q .; then \
-            find . -name "*.Tests.csproj" -print0 | xargs -0 -I{} dotnet test {} -c Release --no-build --logger trx; \
-          else \
-            echo "No test projects found. Skipping tests."; \
-          fi
-
-  dotnet-client:
-    name: ".NET Lint & Test - Mock Client CLI"
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mock/FluVirus.AntiBruteForce.Mock.Client
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            9.0.x
-            8.0.x
-
-      - name: Restore
-        run: dotnet restore FluVirus.AntiBruteForce.Mock.Client.sln
-
-      - name: Build (Release)
-        run: dotnet build FluVirus.AntiBruteForce.Mock.Client.sln -c Release --no-restore
-
-      - name: Lint (dotnet format)
-        run: dotnet format --verify-no-changes --severity info
-
-      - name: Test
-        run: |
-          if ls -1 **/*.Tests.csproj 2>/dev/null | grep -q .; then \
-            find . -name "*.Tests.csproj" -print0 | xargs -0 -I{} dotnet test {} -c Release --no-build --logger trx; \
-          else \
-            echo "No test projects found. Skipping tests."; \
-          fi
-
-  go-abf:
-    name: "Go Lint & Test - ABF Server"
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: src/abfserver
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -91,29 +21,83 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23.x'
-          check-latest: true
+          go-version-file: go.mod
+          cache: true
 
-      - name: Go Cache
-        uses: actions/cache@v4
+      - name: Install Protobuf Compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - name: Install protoc plugins
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.10
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.0
+
+      - name: Generate gRPC code
+        run: make generate
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v7
         with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('src/abfserver/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          version: v2.7.1
 
-      - name: Install golangci-lint
-        uses: golangci/golangci-lint-action@v6
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          version: latest
-          working-directory: src/abfserver
+          go-version-file: go.mod
+          cache: true
 
-      - name: Lint
-        run: golangci-lint run ./...
+      - name: Install Protobuf Compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
 
-      - name: Test
-        run: go test ./...
+      - name: Install protoc plugins
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.10
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.0
 
+      - name: Generate gRPC code
+        run: make generate
 
+      - name: Run tests
+        run: go test -race -count 100 ./...
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install Protobuf Compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - name: Install protoc plugins
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.10
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.0
+
+      - name: Generate gRPC code
+        run: make generate
+
+      - name: Build binary
+        run: go build -o bin/server ./cmd/server

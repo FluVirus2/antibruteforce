@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package antibruteforce.v1;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "/v1/antibruteforce;antibruteforce";
+
+enum AccessDeniedReason {
+  ACCESS_DENIED_REASON_UNSPECIFIED = 0;
+  ACCESS_DENIED_REASON_IP_BLACK_LIST = 1;
+  ACCESS_DENIED_REASON_LOGIN_BLACK_LIST = 2;
+  ACCESS_DENIED_REASON_TOO_MANY_REQUESTS_IP = 3;
+  ACCESS_DENIED_REASON_TOO_MANY_REQUESTS_LOGIN = 4;
+  ACCESS_DENIED_REASON_TOO_MANY_REQUESTS_PASSWORD = 5;
+}
+
+service AntiBruteforce {
+  rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc CheckAccess(CheckAccessRequest) returns (CheckAccessResponse);
+}
+
+message CheckAccessRequest {
+  string ip = 1;
+  string login = 2;
+  string password = 3;
+}
+
+message CheckAccessResponse {
+  bool allowed = 1;
+  AccessDeniedReason reason = 2;
+}
