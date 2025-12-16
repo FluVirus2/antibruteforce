@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package antibruteforce.v1;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "/v1/antibruteforce_management;antibruteforce_management";
+
+message Subnet {
+  reserved 1; // for Ip version later
+  string cidr = 2;
+}
+
+message Pagination {
+  uint64 offset = 1;
+  uint64 limit = 2;
+}
+
+message ListSubnetsRequest {
+  Pagination pagination = 1;
+}
+
+message ListSubnetsResponse {
+  repeated string subnets = 1;
+}
+
+message SubnetRequest {
+  Subnet subnet = 1;
+}
+
+message ResetBucketByIPRequest {
+  string ip = 1;
+}
+
+message ResetBucketByLoginRequest {
+  string login = 1;
+}
+
+message ResetBucketByPasswordRequest {
+  string password = 1;
+}
+
+message ResetBucketResponse {
+  bool was_done = 1;
+}
+
+message ResetBucketByIDRequest {
+  uint64 id = 1;
+}
+
+service BruteforceManagement {
+  rpc AddIPToWhiteList(SubnetRequest) returns (google.protobuf.Empty);
+  rpc RemoveIPFromWhiteList(SubnetRequest) returns (google.protobuf.Empty);
+  rpc ListIPAddressWhiteList(ListSubnetsRequest) returns (ListSubnetsResponse);
+
+  rpc AddIPToBlackList(SubnetRequest) returns (google.protobuf.Empty);
+  rpc RemoveIPFromBlackList(SubnetRequest) returns (google.protobuf.Empty);
+  rpc ListIPAddressBlackList(ListSubnetsRequest) returns (ListSubnetsResponse);
+
+  rpc ResetBucketByIP(ResetBucketByIPRequest) returns (ResetBucketResponse);
+  rpc ResetBucketByLogin(ResetBucketByLoginRequest) returns (ResetBucketResponse);
+  rpc ResetBucketByPassword(ResetBucketByPasswordRequest) returns (ResetBucketResponse);
+}
